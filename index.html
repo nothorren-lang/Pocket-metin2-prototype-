@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Metin2 Pocket Android Prototype</title>
+    <style>
+        body { background: #0f172a; color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 12px; text-align: center; }
+        h1 { font-size: 1.3rem; color: #f59e0b; margin: 8px 0; }
+        .panel { background: #1e293b; border: 1px solid #334155; border-radius: 10px; padding: 12px; margin-bottom: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
+        button { background: #dc2626; color: white; border: none; padding: 10px 14px; border-radius: 6px; font-weight: bold; margin: 4px; cursor: pointer; font-size: 0.9rem; }
+        button:active { background: #b91c1c; transform: scale(0.98); }
+        .btn-secondary { background: #2563eb; }
+        .btn-secondary:active { background: #1d4ed8; }
+        .stat-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; font-size: 0.9rem; text-align: left; background: #0f172a; padding: 8px; border-radius: 6px; }
+        canvas { background: #020617; border: 2px solid #475569; border-radius: 8px; display: block; margin: 8px auto; max-width: 100%; box-shadow: inset 0 2px 4px rgba(0,0,0,0.5); }
+    </style>
+</head>
+<body>
+    <h1>Metin2 Mobile Pocket Prototype</h1>
+    
+    <div class="panel" id="char-select">
+        <h3>Select Your Class</h3>
+        <button onclick="selectClass('Warrior')">Warrior</button>
+        <button onclick="selectClass('Ninja')">Ninja</button>
+        <button onclick="selectClass('Sura')">Sura</button>
+        <button onclick="selectClass('Shaman')">Shaman</button>
+    </div>
+
+    <div class="panel" id="game-ui" style="display:none;">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+            <span id="char-info" style="font-weight:bold; color:#38bdf8;"></span>
+            <button class="btn-secondary" onclick="resetGame()" style="padding:4px 8px; font-size:0.75rem;">Switch Class</button>
+        </div>
+        <div class="stat-grid" id="stats-display"></div>
+        
+        <hr style="border-color:#334155; margin:10px 0;">
+        
+        <h3>Skill Tier Progression</h3>
+        <div style="font-size: 0.95rem;">
+            <span id="skill-name" style="color:#fbbf24; font-weight:bold;">Aura / Skill</span>: <span id="skill-lvl" style="color:#34d399; font-weight:bold;">1</span> 
+            <br>
+            <button class="btn-secondary" onclick="upgradeSkill()" style="margin-top:6px;">Upgrade Skill (+)</button>
+        </div>
+
+        <hr style="border-color:#334155; margin:10px 0;">
+        
+        <h3>Metin Stone Arena</h3>
+        <div style="font-size:0.8rem; color:#94a3b8; margin-bottom:6px;">Tap Stone in Arena to Attack & Spawn Mobs</div>
+        <button onclick="spawnMetin(5)">Lvl 5 (Sorrow)</button>
+        <button onclick="spawnMetin(10)">Lvl 10 (Combat)</button>
+        <button onclick="spawnMetin(15)">Lvl 15 (Battle)</button>
+        
+        <canvas id="gameCanvas" width="300" height="180"></canvas>
+    </div>
+
+<script>
+let player = null;
+const classes = {
+    Warrior: { str: 6, dex: 3, int: 3, con: 7, hp: 760, mp: 240, skill: "Aura of the Sword", lvl: 1 },
+    Ninja:   { str: 4, dex: 7, int: 3, con: 5, hp: 700, mp: 270, skill: "Ambush", lvl: 1 },
+    Sura:    { str: 5, dex: 4, int: 5, con: 5, hp: 730, mp: 300, skill: "Black Magic", lvl: 1 },
+    Shaman:  { str: 3, dex: 3, int: 7, con: 5, hp: 670, mp: 350, skill: "Flying Talisman", lvl: 1 }
+};
+
+function selectClass(className) {
+    player = JSON.parse(JSON.stringify(classes[className]));
+    player.name = className;
+    document.getElementById('char-select').style.display = 'none';
+    document.getElementById('game-ui').style.display = 'block';
+    document.getElementById('skill-name').innerText = player.skill;
+    updateUI();
+}
+
+function resetGame() {
+    document.getElementById('char-select').style.display = 'block';
+    document.getElementById('game-ui').style.display = 'none';
+}
+
+function upgradeSkill() {
+    if (player.lvl < 17) {
+        player.lvl++;
+    } else if (player.lvl === 17) {
+        player.lvl = "M1";
+    } else if (typeof player.lvl === 'string' && player.lvl.startsWith('M')) {
+        let num = parseInt(player.lvl.slice(1));
+        if (num < 10) player.lvl = "M" + (num + 1);
+        else player.lvl = "G1";
+    } else if (player.lvl.startsWith('G')) {
+        let num = parseInt(player.lvl.slice(1));
+        if (num < 10) player.lvl = "G" + (num + 1);
+        else player.lvl = "P (Perfect Master)";
+    }
+    updateUI();
+}
+
+function updateUI() {
+    document.getElementById('char-info').innerText = `${player.name}`;
+    document.getElementById('stats-display').innerHTML = `
+        <div>STR: ${player.str} | DEX: ${player.dex}</div>
+        <div>INT: ${player.int} | CON: ${player.con}</div>
+        <div>HP: ${player.hp}</div>
+        <div>MP: ${player.mp}</div>
+    `;
+    document.getElementById('skill-lvl').innerText = player.lvl;
+}
+
+// Canvas Arena Simulation
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+let currentMetin = null;
+let mobs = [];
+
+function spawnMetin(lvl) {
+    currentMetin = { lvl: lvl, hp: lvl * 2000, maxHp: lvl * 2000, x: 150, y: 90 };
+    mobs = [];
+    let mobName = lvl === 5 ? "Alpha Wolf" : lvl === 10 ? "Wild Boar" : "Brown Bear";
+    mobs.push({ name: mobName, x: 70, y: 90, hp: 400 });
+}
+
+canvas.addEventListener('click', (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const clickX = e.clientX - rect.left;
+    const clickY = e.clientY - rect.top;
+
+    if (currentMetin) {
+        let dist = Math.hypot(clickX - currentMetin.x, clickY - currentMetin.y);
+        if (dist < 30) {
+            let dmg = player.str * 45;
+            currentMetin.hp -= dmg;
+            if (currentMetin.hp <= 0) currentMetin = null;
+        }
+    }
+});
+
+function gameLoop() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    // Draw Metin Stone
+    if (currentMetin) {
+        ctx.fillStyle = '#d97706';
+        ctx.beginPath();
+        ctx.arc(currentMetin.x, currentMetin.y, 24, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#f59e0b';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        ctx.fillStyle = '#fff';
+        ctx.font = '10px sans-serif';
+        ctx.fillText(`Metin Lvl ${currentMetin.lvl}`, currentMetin.x - 30, currentMetin.y - 32);
+        
+        // HP Bar
+        ctx.fillStyle = '#334155';
+        ctx.fillRect(currentMetin.x - 25, currentMetin.y - 28, 50, 5);
+        ctx.fillStyle = '#ef4444';
+        ctx.fillRect(currentMetin.x - 25, currentMetin.y - 28, Math.max(0, (currentMetin.hp / currentMetin.maxHp) * 50), 5);
+    }
+    
+    // Draw Mobs
+    mobs.forEach(m => {
+        ctx.fillStyle = '#10b981';
+        ctx.fillRect(m.x - 7, m.y - 7, 14, 14);
+        ctx.fillStyle = '#fff';
+        ctx.font = '9px sans-serif';
+        ctx.fillText(m.name, m.x - 18, m.y - 12);
+    });
+
+    requestAnimationFrame(gameLoop);
+}
+gameLoop();
+</script>
+</body>
+</html>
