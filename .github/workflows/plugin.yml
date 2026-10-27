@@ -1,0 +1,24 @@
+
+name: ChatGPT & Codex Plugin Autopilot
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  autopilot:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run Plugin Autopilot
+        uses: imMamdouhaboammar/chatgpt-codex-plugin-autopilot@v1
+        with:
+          path: "."
+          action: "auto"
+          output-dir: "dist"
+          fail-on-error: "true"
+          summary: "
+          true"
